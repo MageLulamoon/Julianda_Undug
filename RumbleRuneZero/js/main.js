@@ -14,6 +14,8 @@ function onMonsterAttack(result) {
     endGame(false);
   }
 }
+// Expose so ui.js can restart the timer after closing the tome modal
+window._onMonsterAttack = onMonsterAttack;
 
 // ---------- Combo idle reset ----------
 // If the player stops hitting for 3 seconds, reset the combo counter.

@@ -279,7 +279,9 @@ function showTomeDrop(tomeId) {
     return;
   }
 
-  // Inventory full — show modal with slot replacement options
+  // Inventory full — pause monster attacks while player decides
+  stopAttackTimer();
+
   const modal  = document.getElementById("tome-modal");
   const infoEl = document.getElementById("tome-modal-info");
   const actEl  = document.getElementById("tome-modal-actions");
@@ -311,6 +313,8 @@ function showTomeDrop(tomeId) {
 
 function closeTomeModal() {
   document.getElementById("tome-modal").classList.add("hidden");
+  // Resume monster attacks now that the player has made their decision
+  startAttackTimer(window._onMonsterAttack);
   if (window._resolveTomeDecision) {
     const res = window._resolveTomeDecision;
     window._resolveTomeDecision = null;
