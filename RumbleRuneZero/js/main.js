@@ -6,9 +6,15 @@
 //           monster death, game over, victory
 // ============================================================
 
+// ---------- Game Over Gate ----------
+// Set to true the instant the mage dies. Every async path checks
+// this before doing anything — prevents tome modals bleeding into
+// the game over screen.
+let isGameOver = false;
+
 // ---------- Persistent attack timer callback ----------
-// Defined here so restartAttackTimer can reference it.
 function onMonsterAttack(result) {
+  if (isGameOver) return;
   UI.onMageDamage(result);
   if (result.mageDead) {
     endGame(false);
@@ -18,20 +24,20 @@ function onMonsterAttack(result) {
 window._onMonsterAttack = onMonsterAttack;
 
 // ---------- Combo idle reset ----------
-// If the player stops hitting for 3 seconds, reset the combo counter.
 let comboResetTimer = null;
 
 function resetComboAfterIdle() {
   clearTimeout(comboResetTimer);
   comboResetTimer = setTimeout(() => {
     resetCombo();
-    // If rage mode was active but combo dropped, keep rage on until next fight
-    // (design choice: rage only expires when the monster dies)
   }, 3000);
 }
 
 // ---------- Game Start ----------
 function startGame() {
+  // Clear the game over gate for a fresh run
+  isGameOver = false;
+
   // Reset mage HP
   CombatState.mageHp = CombatState.mageMaxHp;
 
@@ -63,71 +69,64 @@ function startGame() {
 // ---------- Monster Defeated ----------
 // Called by grid.js after a match kills the current monster.
 window.onMonsterDefeated = function(matchResult) {
+  if (isGameOver) return;
   stopAttackTimer();
 
-  // Roll for tome drop on kill
   const tomeDrop = rollTomeDrop("kill");
 
-  // Brief pause before advancing
   setTimeout(async () => {
+    if (isGameOver) return;
+
     if (tomeDrop) {
-      UI.showTomeDrop(tomeDrop);
-      await new Promise(resolve => { window._resolveTomeDecision = resolve; });
+      await new Promise(resolve => {
+        window._resolveTomeDecision = resolve;
+        UI.showTomeDrop(tomeDrop);
+      });
     }
 
+    if (isGameOver) return;
+
     if (isLastMonster()) {
-      endGame(true); // Victory!
+      endGame(true);
       return;
     }
 
-    // Load next monster
     const nextIdx = nextMonsterIndex();
     loadMonster(nextIdx);
 
-    // Reset grid for new fight
     initGrid(document.getElementById("grid-canvas"));
-
     UI.renderMonsterInfo();
     UI.updateMageHp();
     UI.updateRageIndicator();
     UI.hidePhase2UI();
 
-    // Restart attack timer for the new monster
     startAttackTimer(onMonsterAttack);
-
   }, 600);
 };
 
 // ---------- Game End ----------
-async function endGame(victory) {
+function endGame(victory) {
+  if (isGameOver && !victory) return; // prevent double-trigger on death
+  isGameOver = true;
+
   stopAttackTimer();
   clearTimeout(comboResetTimer);
 
+  // Force-close any tome modal that might be open right now
+  const modal = document.getElementById("tome-modal");
+  modal.classList.add("hidden");
+  // Resolve any pending tome promise so the cascade doesn't hang
+  if (window._resolveTomeDecision) {
+    const res = window._resolveTomeDecision;
+    window._resolveTomeDecision = null;
+    res();
+  }
+
   if (victory) {
     UI.showScreen("screen-victory");
-    return;
+  } else {
+    UI.showScreen("screen-gameover");
   }
-
-  // On death: roll tome drops for each filled inventory slot and show them
-  // before the game over screen so the player sees what they had
-  const deathDrops = [];
-  // Give 1 guaranteed tome on death as a consolation
-  const drop = rollTomeDrop("kill"); // reuse kill-rate drop
-  if (drop) deathDrops.push(drop);
-
-  if (deathDrops.length > 0) {
-    for (const tomeId of deathDrops) {
-      // Only offer if there's room (inventory might already be full)
-      if (TomeInventory.hasRoom()) {
-        await new Promise(resolve => {
-          window._resolveTomeDecision = resolve;
-          UI.showTomeDrop(tomeId);
-        });
-      }
-    }
-  }
-
-  UI.showScreen("screen-gameover");
 }
 
 // ---------- Button Wiring ----------
@@ -151,8 +150,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ---------- Phase 2 UI trigger hook ----------
-// combat.js calls Boss.startPhase2() which we intercept here
-// by overriding the triggerPhase2 wrapper.
 const _origTriggerPhase2 = window.triggerPhase2;
 window.triggerPhase2 = function() {
   _origTriggerPhase2();
@@ -160,7 +157,6 @@ window.triggerPhase2 = function() {
 };
 
 // ---------- Rage Mode UI hook ----------
-// Override checkRageMode to also update UI when rage triggers.
 const _origRestartAttackTimer = window.restartAttackTimer;
 window.restartAttackTimer = function(isRage, onAttack) {
   _origRestartAttackTimer(isRage, onAttack || onMonsterAttack);

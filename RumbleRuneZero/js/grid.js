@@ -225,24 +225,33 @@ function attemptSwap(r1, c1, r2, c2) {
 // Cascade loop: resolves one wave at a time, then falls tiles and repeats.
 // chainLevel tracks depth (0 = initial match, 1+ = cascades).
 async function runCascadeLoop(chainLevel) {
+  // Stop immediately if the game ended mid-cascade
+  if (window.isGameOver) {
+    GridState.isLocked = false;
+    return;
+  }
+
   const result = resolveMatches(GridState.grid, chainLevel);
 
   if (!result) {
-    // No matches left — unlock input
     GridState.isLocked = false;
     drawGrid();
     return;
   }
 
-  // Flash matched tiles (brief visual pause)
+  // Flash matched tiles
   drawGridWithHighlights(result.matchedPositions);
   await sleep(250);
+
+  if (window.isGameOver) { GridState.isLocked = false; return; }
 
   // Apply gravity FIRST so no null cells remain on the grid
   applyGravity();
   refillGrid();
   drawGrid();
   await sleep(150);
+
+  if (window.isGameOver) { GridState.isLocked = false; return; }
 
   // Apply damage to monster and update UI
   UI.onMatchResult(result);
@@ -254,10 +263,12 @@ async function runCascadeLoop(chainLevel) {
     return;
   }
 
-  // Handle tome drop AFTER board is fully filled (prevents empty space bug)
-  if (result.tomeDrop) {
+  // Handle tome drop AFTER board is fully filled — skip if game already over
+  if (result.tomeDrop && !window.isGameOver) {
     await handleTomeDrop(result.tomeDrop);
   }
+
+  if (window.isGameOver) { GridState.isLocked = false; return; }
 
   // Check for further cascades
   runCascadeLoop(chainLevel + 1);
