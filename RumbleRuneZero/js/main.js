@@ -57,6 +57,7 @@ function startGame() {
   // Render monster info and HP bars
   UI.renderMonsterInfo();
   UI.updateMageHp();
+  UI.updateRageIndicator();
   UI.hidePhase2UI();
 
   // Start attack timer
@@ -154,13 +155,4 @@ const _origTriggerPhase2 = window.triggerPhase2;
 window.triggerPhase2 = function() {
   _origTriggerPhase2();
   UI.showPhase2UI();
-};
-
-// ---------- Rage Mode UI hook ----------
-const _origRestartAttackTimer = window.restartAttackTimer;
-window.restartAttackTimer = function(isRage, onAttack) {
-  _origRestartAttackTimer(isRage, onAttack || onMonsterAttack);
-  if (isRage) {
-    UI.updateRageIndicator();
-  }
 };

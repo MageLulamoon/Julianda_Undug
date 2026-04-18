@@ -186,8 +186,9 @@ function dealDamageToMage() {
 function checkRageMode() {
   if (!CombatState.isRageMode && CombatState.comboHits >= CombatState.RAGE_COMBO_THRESHOLD) {
     CombatState.isRageMode = true;
-    // Restart the attack timer at increased speed
     restartAttackTimer(true);
+    // Update the UI indicator — UI is loaded after combat.js so window.UI is available here
+    if (window.UI) window.UI.updateRageIndicator();
   }
 }
 
@@ -214,13 +215,13 @@ function restartAttackTimer(isRage, onAttack) {
   if (!CombatState.monster) return;
   let interval = CombatState.monster.attackInterval;
   if (isRage) interval = Math.round(interval * CombatState.RAGE_SPEED_MULTIPLIER);
-  // onAttack stored globally in main.js; we re-pass it here via argument
-  if (onAttack) {
-    CombatState.attackTimer = setInterval(() => {
-      const result = dealDamageToMage();
-      onAttack(result);
-    }, interval);
-  }
+  // Fall back to the globally exposed callback from main.js if none provided
+  const cb = onAttack || window._onMonsterAttack;
+  if (!cb) return;
+  CombatState.attackTimer = setInterval(() => {
+    const result = dealDamageToMage();
+    cb(result);
+  }, interval);
 }
 
 function stopAttackTimer() {

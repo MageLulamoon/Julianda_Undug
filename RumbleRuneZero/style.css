@@ -608,7 +608,8 @@ html, body {
   100% { opacity: 0; transform: translate(-50%, -40%); }
 }
 
-/* ---------- Scrollbar ---------- */
+/* ---------- Utility ---------- */
+.hidden { display: none !important; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg-deep); }
 ::-webkit-scrollbar-thumb { background: var(--bg-border); }

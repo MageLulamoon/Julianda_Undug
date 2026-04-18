@@ -109,9 +109,16 @@ function updateRageIndicator() {
   const el = document.getElementById("rage-indicator");
   const nameEl = document.getElementById("monster-name");
 
-  el.classList.toggle("hidden", !CombatState.isRageMode);
+  if (CombatState.isRageMode) {
+    el.classList.remove("hidden");
+    el.style.display = "";       // clear any inline override
+  } else {
+    el.classList.add("hidden");
+    el.style.display = "none";
+  }
+
   nameEl.classList.toggle("rage", CombatState.isRageMode);
-  renderMonsterSprite(); // redraw sprite with or without glow
+  renderMonsterSprite();
 }
 
 // ---------- Floating Damage Numbers ----------
@@ -264,11 +271,20 @@ function showTomeDrop(tomeId) {
 
   // If there's an empty slot, auto-add with a notification — no modal needed
   if (TomeInventory.hasRoom()) {
+    // Check game over before doing anything
+    if (window.isGameOver) {
+      setTimeout(() => {
+        if (window._resolveTomeDecision) {
+          const res = window._resolveTomeDecision;
+          window._resolveTomeDecision = null;
+          res();
+        }
+      }, 0);
+      return;
+    }
     TomeInventory.add(tomeId);
     renderTomeSlots();
     showTomeNotification(`TOME: ${def.name}`);
-    // Use setTimeout(0) so _resolveTomeDecision is guaranteed to be set
-    // before we call it (the Promise is created right before showTomeDrop)
     setTimeout(() => {
       if (window._resolveTomeDecision) {
         const res = window._resolveTomeDecision;
@@ -280,6 +296,7 @@ function showTomeDrop(tomeId) {
   }
 
   // Inventory full — pause monster attacks while player decides
+  if (window.isGameOver) return;
   stopAttackTimer();
 
   const modal  = document.getElementById("tome-modal");
