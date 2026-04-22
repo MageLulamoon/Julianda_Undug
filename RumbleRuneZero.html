@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rumble Rune Zero</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+/* ============================================================
+   RUMBLE RUNE ZERO — style.css
+   Aesthetic: Pixel-art dungeon, dark stone palette,
+   glowing rune accents. Press Start 2P font throughout.
+   ============================================================ */
+
+/* ---------- CSS Variables ---------- */
+:root {
+  --bg-deep:      #0a0a0f;
+  --bg-panel:     #12121a;
+  --bg-border:    #2a2a3a;
+  --bg-tile:      #1a1a28;
+
+  --col-fire:     #ff6030;
+  --col-water:    #30aaff;
+  --col-grass:    #40d060;
+  --col-dark:     #9060d0;
+
+  --col-hp-full:  #40d060;
+  --col-hp-mid:   #e0b020;
+  --col-hp-low:   #e03030;
+  --col-rage:     #ff2020;
+
+  --col-gold:     #ffd040;
+  --col-white:    #e8e8f0;
+  --col-muted:    #6060a0;
+
+  --font-main:    'Press Start 2P', monospace;
+
+  --tile-size:    64px;
+  --grid-size:    448px;
+}
+
+/* ---------- Reset & Base ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg-deep);
+  color: var(--col-white);
+  font-family: var(--font-main);
+  font-size: 8px;
+  image-rendering: pixelated;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ---------- Screen Manager ---------- */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.screen.active { display: flex; }
+
+/* ---------- MAIN MENU ---------- */
+#screen-menu {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.015) 3px,
+      rgba(255,255,255,0.015) 4px
+    ),
+    radial-gradient(ellipse at 50% 60%, #1a0a30 0%, #0a0a0f 70%);
+}
+
+.menu-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='1' height='1' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E")
+    repeat;
+  pointer-events: none;
+}
+
+.menu-content {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-title {
+  font-size: 28px;
+  line-height: 1.4;
+  color: var(--col-gold);
+  text-shadow:
+    0 0 20px rgba(255, 208, 64, 0.6),
+    0 0 40px rgba(255, 208, 64, 0.3),
+    4px 4px 0 #3a2000;
+  letter-spacing: 4px;
+  animation: title-pulse 3s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(255,208,64,0.6), 0 0 40px rgba(255,208,64,0.3), 4px 4px 0 #3a2000; }
+  50%       { text-shadow: 0 0 30px rgba(255,208,64,0.9), 0 0 60px rgba(255,208,64,0.5), 4px 4px 0 #3a2000; }
+}
+
+.menu-subtitle {
+  font-size: 7px;
+  color: var(--col-muted);
+  letter-spacing: 2px;
+}
+
+/* ---------- Pixel Buttons ---------- */
+.btn-pixel {
+  font-family: var(--font-main);
+  font-size: 9px;
+  color: var(--col-white);
+  background: var(--bg-panel);
+  border: 2px solid var(--col-gold);
+  padding: 12px 24px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  box-shadow: 4px 4px 0 #3a2000;
+  transition: transform 0.05s, box-shadow 0.05s;
+  image-rendering: pixelated;
+  min-width: 200px;
+}
+.btn-pixel:hover {
+  background: #1e1a08;
+  color: var(--col-gold);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #3a2000;
+}
+.btn-pixel:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #3a2000;
+}
+.btn-pixel.secondary {
+  border-color: var(--col-muted);
+  box-shadow: 4px 4px 0 #1a1a2a;
+  font-size: 8px;
+}
+.btn-pixel.secondary:hover {
+  color: var(--col-muted);
+  background: #0e0e18;
+  box-shadow: 6px 6px 0 #1a1a2a;
+}
+
+/* ---------- HOW TO PLAY ---------- */
+#screen-howto { background: var(--bg-deep); }
+
+.howto-box {
+  background: var(--bg-panel);
+  border: 2px solid var(--bg-border);
+  padding: 32px;
+  max-width: 540px;
+  width: 90%;
+  box-shadow: 6px 6px 0 #000;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-title {
+  font-size: 12px;
+  color: var(--col-gold);
+  letter-spacing: 3px;
+  text-align: center;
+}
+
+.howto-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  line-height: 1.8;
+  font-size: 7px;
+  color: #b0b0c8;
+}
+.howto-list li::before { content: "▸ "; color: var(--col-gold); }
+
+.highlight        { color: var(--col-gold); }
+.highlight.fire   { color: var(--col-fire); }
+.highlight.water  { color: var(--col-water); }
+.highlight.grass  { color: var(--col-grass); }
+.highlight.dark   { color: var(--col-dark); }
+.highlight.rage   { color: var(--col-rage); }
+
+/* ---------- GAMEPLAY SCREEN ---------- */
+#screen-game {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 63px,
+      rgba(255,255,255,0.015) 63px,
+      rgba(255,255,255,0.015) 64px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 63px,
+      rgba(255,255,255,0.015) 63px,
+      rgba(255,255,255,0.015) 64px
+    ),
+    var(--bg-deep);
+}
+
+/* -- Monster Area -- */
+#monster-area {
+  width: var(--grid-size);
+  background: var(--bg-panel);
+  border: 2px solid var(--bg-border);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  box-shadow: 0 4px 0 #000;
+}
+
+#monster-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#monster-name {
+  font-size: 10px;
+  color: var(--col-white);
+  letter-spacing: 2px;
+  transition: color 0.3s;
+}
+#monster-name.rage { color: var(--col-rage); animation: rage-flicker 0.4s infinite; }
+
+@keyframes rage-flicker {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+.type-badge {
+  font-size: 6px;
+  padding: 3px 6px;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  letter-spacing: 1px;
+}
+.type-badge.fire  { color: var(--col-fire);  background: rgba(255,96,48,0.15); }
+.type-badge.water { color: var(--col-water); background: rgba(48,170,255,0.15); }
+.type-badge.grass { color: var(--col-grass); background: rgba(64,208,96,0.15); }
+.type-badge.dark  { color: var(--col-dark);  background: rgba(144,96,208,0.15); }
+
+/* Monster HP Bar */
+#monster-hp-bar-wrap {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: #0d0d15;
+  border: 1px solid var(--bg-border);
+}
+#monster-hp-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--col-hp-full);
+  transition: width 0.25s ease, background-color 0.25s;
+}
+#monster-hp-text {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 6px;
+  color: var(--col-white);
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Monster Sprite */
+#monster-sprite-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+#monster-canvas {
+  image-rendering: pixelated;
+  width: 80px;
+  height: 80px;
+}
+
+/* Rage Indicator */
+#rage-indicator {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 7px;
+  color: var(--col-rage);
+  animation: rage-flicker 0.4s infinite;
+}
+
+/* Phase 2 UI */
+#phase2-ui {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+#phase2-ui.hidden { display: none; }
+
+.phase2-label {
+  font-size: 6px;
+  color: var(--col-dark);
+  letter-spacing: 1px;
+}
+
+#phase2-sequence { display: flex; gap: 4px; }
+
+.seq-rune {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--bg-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6px;
+}
+.seq-rune.fire  { border-color: var(--col-fire);  color: var(--col-fire); }
+.seq-rune.water { border-color: var(--col-water); color: var(--col-water); }
+.seq-rune.grass { border-color: var(--col-grass); color: var(--col-grass); }
+.seq-rune.dark  { border-color: var(--col-dark);  color: var(--col-dark); }
+.seq-rune.matched { opacity: 0.35; }
+
+#phase2-progress { display: flex; gap: 3px; align-items: center; }
+.progress-dot {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--col-dark);
+  background: transparent;
+}
+.progress-dot.filled { background: var(--col-dark); }
+
+/* -- Grid -- */
+#grid-wrap {
+  position: relative;
+  border: 2px solid var(--bg-border);
+  box-shadow: 0 0 20px rgba(144,96,208,0.15), 0 4px 0 #000;
+}
+#grid-canvas {
+  display: block;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+/* -- Mage Area -- */
+#mage-area {
+  width: var(--grid-size);
+  background: var(--bg-panel);
+  border: 2px solid var(--bg-border);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 -2px 0 #000;
+}
+
+.label {
+  font-size: 6px;
+  color: var(--col-muted);
+  letter-spacing: 2px;
+}
+
+#mage-hp-section { display: flex; flex-direction: column; gap: 4px; }
+
+#mage-hp-bar-wrap {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: #0d0d15;
+  border: 1px solid var(--bg-border);
+}
+#mage-hp-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--col-hp-full);
+  transition: width 0.25s ease, background-color 0.25s;
+}
+#mage-hp-text {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 6px;
+  color: var(--col-white);
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* -- Tome Slots -- */
+#tome-section { display: flex; flex-direction: column; gap: 4px; }
+#tome-slots   { display: flex; gap: 6px; }
+
+.tome-slot {
+  width: 96px;
+  height: 48px;
+  border: 2px dashed var(--bg-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+  font-size: 6px;
+  color: var(--col-muted);
+  text-align: center;
+  padding: 4px;
+  line-height: 1.5;
+}
+.tome-slot:empty::after { content: "EMPTY"; }
+.tome-slot.filled {
+  border-style: solid;
+  border-color: var(--col-gold);
+  background: rgba(255,208,64,0.05);
+  color: var(--col-gold);
+}
+.tome-slot.filled:hover {
+  background: rgba(255,208,64,0.12);
+  border-color: #fff;
+}
+
+/* ---------- TOME MODAL ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+
+.modal-box {
+  background: var(--bg-panel);
+  border: 2px solid var(--col-gold);
+  padding: 24px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 6px 6px 0 #3a2000;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-title {
+  font-size: 10px;
+  color: var(--col-gold);
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+#tome-modal-info {
+  font-size: 7px;
+  color: #b0b0c8;
+  line-height: 2;
+  text-align: center;
+}
+
+#tome-modal-actions { display: flex; flex-direction: column; gap: 8px; }
+
+.tome-action-btn {
+  font-family: var(--font-main);
+  font-size: 7px;
+  padding: 8px;
+  border: 1px solid var(--bg-border);
+  background: var(--bg-tile);
+  color: var(--col-white);
+  cursor: pointer;
+  text-align: left;
+  letter-spacing: 1px;
+  transition: background 0.1s, border-color 0.1s;
+}
+.tome-action-btn:hover { background: #1e1e30; border-color: var(--col-gold); }
+.tome-action-btn.trash { color: var(--col-muted); }
+.tome-action-btn.trash:hover { border-color: var(--col-rage); color: var(--col-rage); }
+
+/* ---------- GAME OVER / VICTORY ---------- */
+#screen-gameover, #screen-victory {
+  background: radial-gradient(ellipse at center, #1a0808 0%, var(--bg-deep) 70%);
+}
+#screen-victory {
+  background: radial-gradient(ellipse at center, #0a1a08 0%, var(--bg-deep) 70%);
+}
+
+.gameover-box {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.gameover-title {
+  font-size: 24px;
+  color: var(--col-rage);
+  text-shadow: 0 0 20px rgba(224,48,48,0.6), 4px 4px 0 #3a0000;
+  letter-spacing: 4px;
+}
+.gameover-title.gold {
+  color: var(--col-gold);
+  text-shadow: 0 0 20px rgba(255,208,64,0.6), 4px 4px 0 #3a2000;
+}
+
+.gameover-sub {
+  font-size: 7px;
+  color: var(--col-muted);
+  letter-spacing: 2px;
+}
+
+/* ---------- HP Bar Color Thresholds ---------- */
+.hp-bar-mid { background: var(--col-hp-mid) !important; }
+.hp-bar-low { background: var(--col-hp-low) !important; }
+
+/* ---------- Floating Damage Numbers ---------- */
+.dmg-float {
+  position: fixed;
+  font-family: var(--font-main);
+  font-size: 9px;
+  pointer-events: none;
+  z-index: 200;
+  animation: float-up 0.8s ease-out forwards;
+  text-shadow: 2px 2px 0 #000;
+}
+.dmg-float.super  { color: #ffee00; font-size: 11px; }
+.dmg-float.resist { color: #8080a0; font-size: 7px; }
+.dmg-float.heal   { color: var(--col-grass); }
+
+@keyframes float-up {
+  0%   { transform: translateY(0);    opacity: 1; }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+
+/* ---------- Combo Text ---------- */
+.combo-float {
+  position: fixed;
+  font-family: var(--font-main);
+  font-size: 8px;
+  color: var(--col-gold);
+  pointer-events: none;
+  z-index: 200;
+  animation: float-up 1s ease-out forwards;
+  text-shadow: 2px 2px 0 #3a2000;
+}
+
+/* ---------- Tome Drop Notification ---------- */
+.tome-drop-notif {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-main);
+  font-size: 8px;
+  color: var(--col-gold);
+  background: var(--bg-panel);
+  border: 2px solid var(--col-gold);
+  padding: 10px 20px;
+  z-index: 300;
+  animation: notif-show 1.5s ease-out forwards;
+  text-align: center;
+  box-shadow: 4px 4px 0 #3a2000;
+  pointer-events: none;
+}
+
+@keyframes notif-show {
+  0%   { opacity: 0; transform: translate(-50%, -60%); }
+  20%  { opacity: 1; transform: translate(-50%, -50%); }
+  80%  { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -40%); }
+}
+
+/* ---------- Utility ---------- */
+.hidden { display: none !important; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--bg-border); }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== MAIN MENU SCREEN ===================== -->
+  <div id="screen-menu" class="screen active">
+    <div class="menu-bg-overlay"></div>
+    <div class="menu-content">
+      <h1 class="game-title">RUMBLE<br>RUNE<br>ZERO</h1>
+      <p class="menu-subtitle">A mage's last stand against the dark.</p>
+      <button class="btn-pixel" id="btn-start">START GAME</button>
+      <button class="btn-pixel" id="btn-howto">HOW TO PLAY</button>
+    </div>
+  </div>
+
+  <!-- ===================== HOW TO PLAY SCREEN ===================== -->
+  <div id="screen-howto" class="screen">
+    <div class="howto-box">
+      <h2 class="section-title">HOW TO PLAY</h2>
+      <ul class="howto-list">
+        <li>Swap adjacent runes to match 3 or more.</li>
+        <li>Matches deal damage based on rune type vs monster type.</li>
+        <li>Chaining cascades may drop <span class="highlight">Tomes</span>.</li>
+        <li>Monster attacks on a timer — survive and clear the dungeon.</li>
+        <li>Comboing the monster triggers <span class="highlight rage">RAGE MODE</span>.</li>
+        <li>Tomes are one-use spells. You can hold up to 4.</li>
+        <li><span class="highlight fire">Fire</span> beats Grass &nbsp;|&nbsp;
+            <span class="highlight grass">Grass</span> beats Water &nbsp;|&nbsp;
+            <span class="highlight water">Water</span> beats Fire</li>
+        <li><span class="highlight dark">Dark</span> is only super-effective vs Dark.</li>
+      </ul>
+      <button class="btn-pixel" id="btn-back">BACK</button>
+    </div>
+  </div>
+
+  <!-- ===================== GAMEPLAY SCREEN ===================== -->
+  <div id="screen-game" class="screen">
+
+    <div id="monster-area">
+      <div id="monster-info">
+        <span id="monster-name">???</span>
+        <span id="monster-type-badge" class="type-badge">???</span>
+      </div>
+      <div id="monster-hp-bar-wrap">
+        <div id="monster-hp-bar"></div>
+        <span id="monster-hp-text">--/--</span>
+      </div>
+
+      <div id="phase2-ui" class="hidden">
+        <span class="phase2-label">SEQUENCE:</span>
+        <div id="phase2-sequence"></div>
+        <div id="phase2-progress"></div>
+      </div>
+
+      <div id="monster-sprite-wrap">
+        <canvas id="monster-canvas" width="80" height="80"></canvas>
+      </div>
+
+      <!-- Hidden until rage mode triggers -->
+      <div id="rage-indicator" class="hidden">⚡ RAGE MODE</div>
+    </div>
+
+    <div id="grid-wrap">
+      <canvas id="grid-canvas" width="448" height="448"></canvas>
+    </div>
+
+    <div id="mage-area">
+      <div id="mage-hp-section">
+        <span class="label">MAGE HP</span>
+        <div id="mage-hp-bar-wrap">
+          <div id="mage-hp-bar"></div>
+          <span id="mage-hp-text">--/--</span>
+        </div>
+      </div>
+
+      <div id="tome-section">
+        <span class="label">TOMES</span>
+        <div id="tome-slots">
+          <div class="tome-slot" data-index="0"></div>
+          <div class="tome-slot" data-index="1"></div>
+          <div class="tome-slot" data-index="2"></div>
+          <div class="tome-slot" data-index="3"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== TOME PICKUP MODAL ===================== -->
+  <div id="tome-modal" class="modal hidden">
+    <div class="modal-box">
+      <h3 class="modal-title">TOME FOUND!</h3>
+      <div id="tome-modal-info"></div>
+      <div id="tome-modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- ===================== GAME OVER SCREEN ===================== -->
+  <div id="screen-gameover" class="screen">
+    <div class="gameover-box">
+      <h2 class="gameover-title">YOU FELL.</h2>
+      <p class="gameover-sub">The darkness consumed the mage.</p>
+      <button class="btn-pixel" id="btn-retry">TRY AGAIN</button>
+      <button class="btn-pixel secondary" id="btn-menu">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- ===================== VICTORY SCREEN ===================== -->
+  <div id="screen-victory" class="screen">
+    <div class="gameover-box victory">
+      <h2 class="gameover-title gold">VICTORY!</h2>
+      <p class="gameover-sub">The runes answered your call.</p>
+      <button class="btn-pixel" id="btn-retry-win">PLAY AGAIN</button>
+      <button class="btn-pixel secondary" id="btn-menu-win">MAIN MENU</button>
+    </div>
+  </div>
+
+  <script>
+  // ============================================================
+  //  combat.js
+  // ============================================================
+
+  const TYPE_CHART = {
+    fire:  { fire: 1.0, water: 0.7, grass: 1.3, dark: 1.0 },
+    water: { fire: 1.3, water: 1.0, grass: 0.7, dark: 1.0 },
+    grass: { fire: 0.7, water: 1.3, grass: 1.0, dark: 1.0 },
+    dark:  { fire: 1.0, water: 1.0, grass: 1.0, dark: 1.3 },
+  };
+
+  function getTypeMultiplier(runeType, monsterType) {
+    if (TYPE_CHART[runeType] && TYPE_CHART[runeType][monsterType] !== undefined) {
+      return TYPE_CHART[runeType][monsterType];
+    }
+    return 1.0;
+  }
+
+  const MONSTER_DATA = [
+    {
+      id: "ember_sprite",
+      name: "EMBER SPRITE",
+      type: "fire",
+      hp: 15,
+      damage: 2,
+      attackInterval: 5000,
+      spriteColor: "#ff6030",
+      isBoss: false,
+      isMinion: false,
+    },
+    {
+      id: "marsh_toad",
+      name: "MARSH TOAD",
+      type: "water",
+      hp: 25,
+      damage: 3,
+      attackInterval: 6000,
+      spriteColor: "#30aaff",
+      isBoss: false,
+      isMinion: false,
+    },
+    {
+      id: "briar_wolf",
+      name: "BRIAR WOLF",
+      type: "grass",
+      hp: 14,
+      damage: 4,
+      attackInterval: 3500,
+      spriteColor: "#40d060",
+      isBoss: false,
+      isMinion: false,
+    },
+    {
+      id: "cinder_golem",
+      name: "CINDER GOLEM",
+      type: "fire",
+      hp: 20,
+      damage: 3,
+      attackInterval: 4500,
+      spriteColor: "#e05020",
+      isBoss: false,
+      isMinion: false,
+    },
+    {
+      id: "shade_wraith",
+      name: "SHADE WRAITH",
+      type: "dark",
+      hp: 18,
+      damage: 3,
+      attackInterval: 4000,
+      spriteColor: "#9060d0",
+      isBoss: false,
+      isMinion: true,
+    },
+    {
+      id: "void_sovereign",
+      name: "VOID SOVEREIGN",
+      type: "dark",
+      hp: 45,
+      damage: 4,
+      attackInterval: 4500,
+      spriteColor: "#6030a0",
+      isBoss: true,
+      isMinion: false,
+    },
+  ];
+
+  const CombatState = {
+    monsterIndex: 0,
+    monster: null,
+    mageHp: 50,
+    mageMaxHp: 50,
+    attackTimer: null,
+    isRageMode: false,
+    comboHits: 0,
+    RAGE_COMBO_THRESHOLD: 5,
+    RAGE_SPEED_MULTIPLIER: 0.70,
+    isPhase2: false,
+  };
+
+  function loadMonster(index) {
+    const data = MONSTER_DATA[index];
+    CombatState.monsterIndex = index;
+    CombatState.monster = { ...data, currentHp: data.hp };
+    CombatState.isRageMode = false;
+    CombatState.comboHits = 0;
+    CombatState.isPhase2 = false;
+  }
+
+  function dealDamageToMonster(matchCount, runeType) {
+    const monster = CombatState.monster;
+    if (!monster) return null;
+
+    let baseDamage = matchCount - 2;
+    let effectiveRuneType = runeType;
+
+    if (CombatState.isPhase2 && runeType === "dark") {
+      return { damage: 0, multiplier: 0, immune: true };
+    }
+
+    let multiplier = getTypeMultiplier(effectiveRuneType, monster.type);
+    let finalDamage = Math.max(1, Math.round(baseDamage * multiplier));
+
+    monster.currentHp = Math.max(0, monster.currentHp - finalDamage);
+    CombatState.comboHits++;
+    checkRageMode();
+
+    if (monster.isBoss && !CombatState.isPhase2 && monster.currentHp <= monster.hp / 2) {
+      triggerPhase2();
+    }
+
+    return {
+      damage: finalDamage,
+      multiplier,
+      isSuper: multiplier > 1.0,
+      isResist: multiplier < 1.0,
+      monsterDead: monster.currentHp <= 0,
+      phase2Triggered: CombatState.isPhase2,
+    };
+  }
+
+  function dealDamageToMage() {
+    const dmg = CombatState.monster ? CombatState.monster.damage : 1;
+    CombatState.mageHp = Math.max(0, CombatState.mageHp - dmg);
+    return { damage: dmg, mageDead: CombatState.mageHp <= 0 };
+  }
+
+  function checkRageMode() {
+    if (!CombatState.isRageMode && CombatState.comboHits >= CombatState.RAGE_COMBO_THRESHOLD) {
+      CombatState.isRageMode = true;
+      restartAttackTimer(true);
+      if (window.UI) window.UI.updateRageIndicator();
+    }
+  }
+
+  function resetCombo() {
+    CombatState.comboHits = 0;
+  }
+
+  function startAttackTimer(onAttack) {
+    stopAttackTimer();
+    const interval = CombatState.monster ? CombatState.monster.attackInterval : 4000;
+    CombatState.attackTimer = setInterval(() => {
+      const result = dealDamageToMage();
+      onAttack(result);
+    }, interval);
+  }
+
+  function restartAttackTimer(isRage, onAttack) {
+    stopAttackTimer();
+    if (!CombatState.monster) return;
+    let interval = CombatState.monster.attackInterval;
+    if (isRage) interval = Math.round(interval * CombatState.RAGE_SPEED_MULTIPLIER);
+    const cb = onAttack || window._onMonsterAttack;
+    if (!cb) return;
+    CombatState.attackTimer = setInterval(() => {
+      const result = dealDamageToMage();
+      cb(result);
+    }, interval);
+  }
+
+  function stopAttackTimer() {
+    if (CombatState.attackTimer) {
+      clearInterval(CombatState.attackTimer);
+      CombatState.attackTimer = null;
+    }
+  }
+
+  function triggerPhase2() {
+    CombatState.isPhase2 = true;
+    Boss.startPhase2();
+  }
+
+  function isLastMonster() {
+    return CombatState.monsterIndex >= MONSTER_DATA.length - 1;
+  }
+
+  function nextMonsterIndex() {
+    return CombatState.monsterIndex + 1;
+  }
+
+  // ============================================================
+  //  tomes.js
+  // ============================================================
+
+  const TOME_DEFS = {
+    burnout: {
+      id: "burnout",
+      name: "BURNOUT",
+      desc: "Converts all Grass runes to Dark.",
+      effect(grid) {
+        const changed = [];
+        for (let r = 0; r < grid.length; r++) {
+          for (let c = 0; c < grid[r].length; c++) {
+            if (grid[r][c].type === "grass") {
+              grid[r][c].type = "dark";
+              changed.push({ r, c });
+            }
+          }
+        }
+        return changed;
+      },
+    },
+    overgrow: {
+      id: "overgrow",
+      name: "OVERGROW",
+      desc: "Each Grass rune converts Dark runes in its 3x3 area to Grass.",
+      effect(grid) {
+        const ROWS = grid.length;
+        const COLS = grid[0].length;
+        const changed = [];
+        const grassPositions = [];
+        for (let r = 0; r < ROWS; r++)
+          for (let c = 0; c < COLS; c++)
+            if (grid[r][c].type === "grass") grassPositions.push({ r, c });
+
+        for (const pos of grassPositions) {
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const nr = pos.r + dr;
+              const nc = pos.c + dc;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                if (grid[nr][nc].type === "dark") {
+                  grid[nr][nc].type = "grass";
+                  if (!changed.find(x => x.r === nr && x.c === nc))
+                    changed.push({ r: nr, c: nc });
+                }
+              }
+            }
+          }
+        }
+        return changed;
+      },
+    },
+    tidal_ruin: {
+      id: "tidal_ruin",
+      name: "TIDAL RUIN",
+      desc: "Dark runes deal damage as Water this turn.",
+      effect(_grid) { TomeState.tidalRuinActive = true; return []; },
+    },
+    shadow_shock: {
+      id: "shadow_shock",
+      name: "SHADOW SHOCK",
+      desc: "Dark runes deal 2x damage if monster is below 50% HP.",
+      effect(_grid) { TomeState.shadowShockActive = true; return []; },
+    },
+  };
+
+  const TomeInventory = {
+    slots: [null, null, null, null],
+    hasRoom() { return this.slots.some(s => s === null); },
+    add(tomeId) {
+      const idx = this.slots.indexOf(null);
+      if (idx === -1) return -1;
+      this.slots[idx] = tomeId;
+      return idx;
+    },
+    remove(slotIndex) { this.slots[slotIndex] = null; },
+    replace(slotIndex, tomeId) { this.slots[slotIndex] = tomeId; },
+    use(slotIndex, grid) {
+      const tomeId = this.slots[slotIndex];
+      if (!tomeId) return null;
+      const def = TOME_DEFS[tomeId];
+      if (!def) return null;
+      const changed = def.effect(grid);
+      this.remove(slotIndex);
+      return { changed, tomeId };
+    },
+  };
+
+  const TomeState = {
+    tidalRuinActive: false,
+    shadowShockActive: false,
+    resetMatchFlags() {
+      this.tidalRuinActive = false;
+      this.shadowShockActive = false;
+    },
+  };
+
+  const ALL_TOME_IDS = Object.keys(TOME_DEFS);
+
+  function rollTomeDrop(reason) {
+    let chance = 0;
+    if (reason === "kill")    chance = 0.60;
+    if (reason === "cascade") chance = 0.25;
+    if (Math.random() < chance)
+      return ALL_TOME_IDS[Math.floor(Math.random() * ALL_TOME_IDS.length)];
+    return null;
+  }
+
+  // ============================================================
+  //  boss.js
+  // ============================================================
+
+  const PHASE2_RUNE_POOL = ["fire", "water", "grass"];
+
+  const Phase2State = {
+    active: false,
+    sequence: [],
+    progress: 0,
+  };
+
+  function startPhase2() {
+    Phase2State.active = true;
+    Phase2State.progress = 0;
+    Phase2State.sequence = generateSequence();
+  }
+
+  function generateSequence() {
+    const seq = [];
+    for (let i = 0; i < 3; i++)
+      seq.push(PHASE2_RUNE_POOL[Math.floor(Math.random() * PHASE2_RUNE_POOL.length)]);
+    return seq;
+  }
+
+  function handlePhase2Match(runeType, matchCount) {
+    if (!Phase2State.active) return null;
+    if (runeType === "dark")
+      return { damage: 0, immune: true, sequenceAdvanced: false, sequenceComplete: false };
+
+    const expected = Phase2State.sequence[Phase2State.progress];
+    if (runeType !== expected)
+      return { damage: 0, wrongRune: true, sequenceAdvanced: false, sequenceComplete: false };
+
+    Phase2State.progress++;
+    const damage = Math.max(1, matchCount - 2);
+
+    if (Phase2State.progress >= Phase2State.sequence.length) {
+      Phase2State.progress = 0;
+      Phase2State.sequence = generateSequence();
+      return { damage, sequenceAdvanced: true, sequenceComplete: true, newSequence: Phase2State.sequence };
+    }
+    return { damage, sequenceAdvanced: true, sequenceComplete: false };
+  }
+
+  function getPhase2Sequence() { return Phase2State.sequence; }
+  function getPhase2Progress() { return Phase2State.progress; }
+  function isPhase2Active()     { return Phase2State.active; }
+
+  const Boss = { startPhase2, handlePhase2Match, getPhase2Sequence, getPhase2Progress, isPhase2Active };
+
+  // ============================================================
+  //  match.js
+  // ============================================================
+
+  function findAllMatches(grid) {
+    const ROWS = grid.length;
+    const COLS = grid[0].length;
+    const matched = new Set();
+
+    for (let r = 0; r < ROWS; r++) {
+      let run = 1;
+      for (let c = 1; c < COLS; c++) {
+        const cur  = grid[r][c];
+        const prev = grid[r][c - 1];
+        if (cur && prev && cur.type === prev.type) {
+          run++;
+        } else {
+          if (run >= 3) for (let k = c - run; k < c; k++) matched.add(`${r},${k}`);
+          run = 1;
+        }
+      }
+      if (run >= 3) for (let k = COLS - run; k < COLS; k++) matched.add(`${r},${k}`);
+    }
+
+    for (let c = 0; c < COLS; c++) {
+      let run = 1;
+      for (let r = 1; r < ROWS; r++) {
+        const cur  = grid[r][c];
+        const prev = grid[r - 1][c];
+        if (cur && prev && cur.type === prev.type) {
+          run++;
+        } else {
+          if (run >= 3) for (let k = r - run; k < r; k++) matched.add(`${k},${c}`);
+          run = 1;
+        }
+      }
+      if (run >= 3) for (let k = ROWS - run; k < ROWS; k++) matched.add(`${k},${c}`);
+    }
+
+    return matched;
+  }
+
+  function resolveMatches(grid, chainLevel = 0) {
+    const matchedSet = findAllMatches(grid);
+    if (matchedSet.size === 0) return null;
+
+    const groups = {};
+    for (const key of matchedSet) {
+      const [r, c] = key.split(",").map(Number);
+      const t = grid[r][c].type;
+      groups[t] = (groups[t] || 0) + 1;
+    }
+
+    let totalDamage = 0;
+    const results = [];
+
+    for (const [runeType, count] of Object.entries(groups)) {
+      let dmg = 0;
+      let resultInfo = {};
+
+      if (CombatState.isPhase2) {
+        const p2result = Boss.handlePhase2Match(runeType, count);
+        if (p2result) {
+          dmg = p2result.damage;
+          if (dmg > 0)
+            CombatState.monster.currentHp = Math.max(0, CombatState.monster.currentHp - dmg);
+          resultInfo = { ...p2result, runeType, count };
+        }
+      } else {
+        let effectiveType = runeType;
+        if (TomeState.tidalRuinActive && runeType === "dark") effectiveType = "water";
+
+        const raw = dealDamageToMonster(count, effectiveType);
+        if (!raw) continue;
+
+        let finalDmg = raw.damage;
+        if (
+          TomeState.shadowShockActive &&
+          runeType === "dark" &&
+          CombatState.monster.currentHp <= CombatState.monster.hp / 2
+        ) {
+          finalDmg *= 2;
+          CombatState.monster.currentHp = Math.max(0, CombatState.monster.currentHp - finalDmg / 2);
+        }
+
+        dmg = finalDmg;
+        resultInfo = { ...raw, damage: dmg, runeType, count };
+      }
+
+      totalDamage += dmg;
+      results.push(resultInfo);
+    }
+
+    for (const key of matchedSet) {
+      const [r, c] = key.split(",").map(Number);
+      grid[r][c] = null;
+    }
+
+    TomeState.resetMatchFlags();
+
+    let tomeDrop = null;
+    if (chainLevel > 0) tomeDrop = rollTomeDrop("cascade");
+
+    return {
+      totalDamage,
+      matchedPositions: [...matchedSet].map(k => {
+        const [r, c] = k.split(",").map(Number);
+        return { r, c };
+      }),
+      groups,
+      results,
+      chainLevel,
+      tomeDrop,
+    };
+  }
+
+  // ============================================================
+  //  grid.js
+  // ============================================================
+
+  const GRID_ROWS = 7;
+  const GRID_COLS = 7;
+  const TILE_SIZE = 64;
+
+  const RUNE_COLORS = { fire: "#ff6030", water: "#30aaff", grass: "#40d060", dark: "#9060d0" };
+  const RUNE_LABELS = { fire: "F", water: "W", grass: "G", dark: "D" };
+
+  const GridState = {
+    grid: [],
+    selectedCell: null,
+    isLocked: false,
+    canvas: null,
+    ctx: null,
+  };
+
+  function initGrid(canvasEl) {
+    // Remove old click listeners by cloning the canvas
+    const newCanvas = canvasEl.cloneNode(true);
+    canvasEl.parentNode.replaceChild(newCanvas, canvasEl);
+
+    GridState.canvas = newCanvas;
+    GridState.ctx = newCanvas.getContext("2d");
+    GridState.grid = createGrid();
+    GridState.selectedCell = null;
+    GridState.isLocked = false;
+
+    resolveStartingMatches();
+    drawGrid();
+    GridState.canvas.addEventListener("click", onGridClick);
+  }
+
+  function createGrid() {
+    const g = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      g[r] = [];
+      for (let c = 0; c < GRID_COLS; c++) g[r][c] = { type: randomRune() };
+    }
+    return g;
+  }
+
+  function randomRune() {
+    const roll = Math.random();
+    if (roll < 0.10) return "dark";
+    const normals = ["fire", "water", "grass"];
+    return normals[Math.floor(Math.random() * normals.length)];
+  }
+
+  function resolveStartingMatches() {
+    let found = true;
+    while (found) {
+      const matched = findAllMatches(GridState.grid);
+      if (matched.size === 0) { found = false; break; }
+      for (const key of matched) {
+        const [r, c] = key.split(",").map(Number);
+        GridState.grid[r][c] = { type: randomRune() };
+      }
+    }
+  }
+
+  function drawGrid() {
+    const { ctx, grid, selectedCell } = GridState;
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const x = c * TILE_SIZE;
+        const y = r * TILE_SIZE;
+        const cell = grid[r][c];
+
+        ctx.fillStyle = "#1a1a28";
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        ctx.strokeStyle = "#2a2a3a";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+
+        if (!cell) continue;
+
+        // ----- Placeholder sprite -----
+        const padding = 6;
+        ctx.fillStyle = RUNE_COLORS[cell.type] || "#888";
+        ctx.fillRect(x + padding, y + padding, TILE_SIZE - padding * 2, TILE_SIZE - padding * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.fillRect(x + padding + 2, y + padding + 2, TILE_SIZE - padding * 2 - 4, TILE_SIZE - padding * 2 - 4);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 16px 'Press Start 2P', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(RUNE_LABELS[cell.type] || "?", x + TILE_SIZE / 2, y + TILE_SIZE / 2);
+        // ----- End placeholder -----
+
+        if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
+          ctx.strokeStyle = "#ffd040";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        }
+      }
+    }
+  }
+
+  function onGridClick(e) {
+    if (GridState.isLocked) return;
+    const rect = GridState.canvas.getBoundingClientRect();
+    const scaleX = GridState.canvas.width / rect.width;
+    const scaleY = GridState.canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    const c = Math.floor(mx / TILE_SIZE);
+    const r = Math.floor(my / TILE_SIZE);
+    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return;
+    handleCellClick(r, c);
+  }
+
+  function handleCellClick(r, c) {
+    const { selectedCell } = GridState;
+
+    if (!selectedCell) {
+      GridState.selectedCell = { r, c };
+      drawGrid();
+      return;
+    }
+    if (selectedCell.r === r && selectedCell.c === c) {
+      GridState.selectedCell = null;
+      drawGrid();
+      return;
+    }
+
+    const dr = Math.abs(r - selectedCell.r);
+    const dc = Math.abs(c - selectedCell.c);
+
+    if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+      attemptSwap(selectedCell.r, selectedCell.c, r, c);
+      GridState.selectedCell = null;
+    } else {
+      GridState.selectedCell = { r, c };
+      drawGrid();
+    }
+  }
+
+  function attemptSwap(r1, c1, r2, c2) {
+    const grid = GridState.grid;
+    const tmp = grid[r1][c1];
+    grid[r1][c1] = grid[r2][c2];
+    grid[r2][c2] = tmp;
+
+    const matches = findAllMatches(grid);
+    if (matches.size === 0) {
+      const tmp2 = grid[r1][c1];
+      grid[r1][c1] = grid[r2][c2];
+      grid[r2][c2] = tmp2;
+      drawGrid();
+      return;
+    }
+
+    GridState.isLocked = true;
+    drawGrid();
+    runCascadeLoop(0);
+  }
+
+  async function runCascadeLoop(chainLevel) {
+    if (window.isGameOver) { GridState.isLocked = false; return; }
+
+    const result = resolveMatches(GridState.grid, chainLevel);
+    if (!result) {
+      GridState.isLocked = false;
+      drawGrid();
+      return;
+    }
+
+    drawGridWithHighlights(result.matchedPositions);
+    await sleep(250);
+
+    if (window.isGameOver) { GridState.isLocked = false; return; }
+
+    applyGravity();
+    refillGrid();
+    drawGrid();
+    await sleep(150);
+
+    if (window.isGameOver) { GridState.isLocked = false; return; }
+
+    UI.onMatchResult(result);
+
+    if (CombatState.monster && CombatState.monster.currentHp <= 0) {
+      GridState.isLocked = false;
+      window.onMonsterDefeated(result);
+      return;
+    }
+
+    if (result.tomeDrop && !window.isGameOver) {
+      await handleTomeDrop(result.tomeDrop);
+    }
+
+    if (window.isGameOver) { GridState.isLocked = false; return; }
+
+    runCascadeLoop(chainLevel + 1);
+  }
+
+  async function handleTomeDrop(tomeId) {
+    return new Promise(resolve => {
+      window._resolveTomeDecision = resolve;
+      UI.showTomeDrop(tomeId);
+    });
+  }
+
+  function drawGridWithHighlights(positions) {
+    drawGrid();
+    const ctx = GridState.ctx;
+    for (const { r, c } of positions) {
+      const x = c * TILE_SIZE;
+      const y = r * TILE_SIZE;
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    }
+  }
+
+  function applyGravity() {
+    const grid = GridState.grid;
+    for (let c = 0; c < GRID_COLS; c++) {
+      const tiles = [];
+      for (let r = GRID_ROWS - 1; r >= 0; r--)
+        if (grid[r][c] !== null) tiles.push(grid[r][c]);
+      for (let r = GRID_ROWS - 1; r >= 0; r--)
+        grid[r][c] = tiles.shift() || null;
+    }
+  }
+
+  function refillGrid() {
+    const grid = GridState.grid;
+    for (let r = 0; r < GRID_ROWS; r++)
+      for (let c = 0; c < GRID_COLS; c++)
+        if (grid[r][c] === null) grid[r][c] = { type: randomRune() };
+  }
+
+  function applyTomeEffect(changedCells) {
+    drawGrid();
+    const ctx = GridState.ctx;
+    for (const { r, c } of changedCells) {
+      const x = c * TILE_SIZE;
+      const y = r * TILE_SIZE;
+      ctx.fillStyle = "rgba(255,208,64,0.35)";
+      ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    }
+    setTimeout(() => {
+      drawGrid();
+      GridState.isLocked = true;
+      runCascadeLoop(0);
+    }, 400);
+  }
+
+  function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  // ============================================================
+  //  ui.js
+  // ============================================================
+
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    const target = document.getElementById(id);
+    if (target) target.classList.add("active");
+  }
+
+  function updateMonsterHp() {
+    const monster = CombatState.monster;
+    if (!monster) return;
+    const bar = document.getElementById("monster-hp-bar");
+    const txt = document.getElementById("monster-hp-text");
+    const pct = Math.max(0, monster.currentHp / monster.hp) * 100;
+    bar.style.width = pct + "%";
+    txt.textContent = `${monster.currentHp}/${monster.hp}`;
+    bar.classList.remove("hp-bar-mid", "hp-bar-low");
+    if (pct <= 25) bar.classList.add("hp-bar-low");
+    else if (pct <= 50) bar.classList.add("hp-bar-mid");
+  }
+
+  function updateMageHp() {
+    const bar = document.getElementById("mage-hp-bar");
+    const txt = document.getElementById("mage-hp-text");
+    const pct = Math.max(0, CombatState.mageHp / CombatState.mageMaxHp) * 100;
+    bar.style.width = pct + "%";
+    txt.textContent = `${CombatState.mageHp}/${CombatState.mageMaxHp}`;
+    bar.classList.remove("hp-bar-mid", "hp-bar-low");
+    if (pct <= 25) bar.classList.add("hp-bar-low");
+    else if (pct <= 50) bar.classList.add("hp-bar-mid");
+  }
+
+  function renderMonsterInfo() {
+    const monster = CombatState.monster;
+    if (!monster) return;
+    const nameEl  = document.getElementById("monster-name");
+    const badgeEl = document.getElementById("monster-type-badge");
+    nameEl.textContent = monster.name;
+    nameEl.classList.toggle("rage", CombatState.isRageMode);
+    badgeEl.textContent = monster.type.toUpperCase();
+    badgeEl.className = `type-badge ${monster.type}`;
+    updateMonsterHp();
+    renderMonsterSprite();
+  }
+
+  function renderMonsterSprite() {
+    const monster = CombatState.monster;
+    if (!monster) return;
+    const canvas = document.getElementById("monster-canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const color = monster.spriteColor || "#888";
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = color;
+    ctx.fillRect(20, 20, 40, 40);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(26, 28, 8, 8);
+    ctx.fillRect(46, 28, 8, 8);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(28, 30, 4, 4);
+    ctx.fillRect(48, 30, 4, 4);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(28, 44, 24, 4);
+    if (CombatState.isRageMode) {
+      ctx.strokeStyle = "#ff2020";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(18, 18, 44, 44);
+    }
+  }
+
+  function updateRageIndicator() {
+    const el     = document.getElementById("rage-indicator");
+    const nameEl = document.getElementById("monster-name");
+    if (CombatState.isRageMode) {
+      el.classList.remove("hidden");
+      el.style.display = "";
+    } else {
+      el.classList.add("hidden");
+      el.style.display = "none";
+    }
+    nameEl.classList.toggle("rage", CombatState.isRageMode);
+    renderMonsterSprite();
+  }
+
+  function spawnDamageFloat(damage, multiplier, x, y) {
+    const el = document.createElement("div");
+    el.classList.add("dmg-float");
+    let label = `-${damage}`;
+    if (multiplier > 1.0) { el.classList.add("super"); label = `💥 -${damage}`; }
+    else if (multiplier < 1.0 && multiplier > 0) el.classList.add("resist");
+    el.textContent = label;
+    el.style.left = x + "px";
+    el.style.top  = y + "px";
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }
+
+  function spawnMageDamageFloat(damage, x, y) {
+    const el = document.createElement("div");
+    el.classList.add("dmg-float");
+    el.style.color = "#ff4040";
+    el.textContent = `-${damage}`;
+    el.style.left = x + "px";
+    el.style.top  = y + "px";
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }
+
+  function spawnComboFloat(chainLevel, x, y) {
+    if (chainLevel < 1) return;
+    const el = document.createElement("div");
+    el.classList.add("combo-float");
+    el.textContent = `CHAIN x${chainLevel + 1}!`;
+    el.style.left = x + "px";
+    el.style.top  = y + "px";
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }
+
+  function onMatchResult(result) {
+    if (!result) return;
+    updateMonsterHp();
+    const gridCanvas = document.getElementById("grid-canvas");
+    const rect = gridCanvas.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    for (const r of result.results) {
+      if (r.damage > 0)
+        spawnDamageFloat(r.damage, r.multiplier || 1, cx + (Math.random() * 60 - 30), cy - 20);
+    }
+    if (result.chainLevel > 0) spawnComboFloat(result.chainLevel, cx - 40, cy - 60);
+    if (CombatState.isPhase2) updatePhase2UI();
+  }
+
+  function onMageDamage(result) {
+    updateMageHp();
+    const mageBar = document.getElementById("mage-hp-bar-wrap");
+    const rect = mageBar.getBoundingClientRect();
+    spawnMageDamageFloat(result.damage, rect.left + 20, rect.top - 20);
+  }
+
+  function showPhase2UI() {
+    document.getElementById("phase2-ui").classList.remove("hidden");
+    updatePhase2UI();
+  }
+
+  function hidePhase2UI() {
+    document.getElementById("phase2-ui").classList.add("hidden");
+  }
+
+  function updatePhase2UI() {
+    const seq      = Boss.getPhase2Sequence();
+    const progress = Boss.getPhase2Progress();
+    const seqEl    = document.getElementById("phase2-sequence");
+    const progEl   = document.getElementById("phase2-progress");
+
+    seqEl.innerHTML = "";
+    seq.forEach((type, i) => {
+      const div = document.createElement("div");
+      div.classList.add("seq-rune", type);
+      if (i < progress) div.classList.add("matched");
+      div.textContent = type[0].toUpperCase();
+      seqEl.appendChild(div);
+    });
+
+    progEl.innerHTML = "";
+    for (let i = 0; i < seq.length; i++) {
+      const dot = document.createElement("div");
+      dot.classList.add("progress-dot");
+      if (i < progress) dot.classList.add("filled");
+      progEl.appendChild(dot);
+    }
+  }
+
+  function renderTomeSlots() {
+    document.querySelectorAll(".tome-slot").forEach((slot, i) => {
+      const tomeId = TomeInventory.slots[i];
+      slot.innerHTML = "";
+      slot.classList.remove("filled");
+      if (tomeId) {
+        const def = TOME_DEFS[tomeId];
+        slot.classList.add("filled");
+        slot.textContent = def.name;
+        slot.title = def.desc;
+      }
+    });
+  }
+
+  function showTomeDrop(tomeId) {
+    const def = TOME_DEFS[tomeId];
+    if (!def) {
+      setTimeout(() => {
+        if (window._resolveTomeDecision) {
+          const res = window._resolveTomeDecision;
+          window._resolveTomeDecision = null;
+          res();
+        }
+      }, 0);
+      return;
+    }
+
+    if (TomeInventory.hasRoom()) {
+      if (window.isGameOver) {
+        setTimeout(() => {
+          if (window._resolveTomeDecision) {
+            const res = window._resolveTomeDecision;
+            window._resolveTomeDecision = null;
+            res();
+          }
+        }, 0);
+        return;
+      }
+      TomeInventory.add(tomeId);
+      renderTomeSlots();
+      showTomeNotification(`TOME: ${def.name}`);
+      setTimeout(() => {
+        if (window._resolveTomeDecision) {
+          const res = window._resolveTomeDecision;
+          window._resolveTomeDecision = null;
+          res();
+        }
+      }, 0);
+      return;
+    }
+
+    if (window.isGameOver) return;
+    stopAttackTimer();
+
+    const modal  = document.getElementById("tome-modal");
+    const infoEl = document.getElementById("tome-modal-info");
+    const actEl  = document.getElementById("tome-modal-actions");
+
+    infoEl.innerHTML = `<strong>${def.name}</strong><br><br>${def.desc}`;
+    actEl.innerHTML  = "";
+    modal.classList.remove("hidden");
+
+    TomeInventory.slots.forEach((slotTomeId, i) => {
+      const slotDef = TOME_DEFS[slotTomeId];
+      const btn = document.createElement("button");
+      btn.classList.add("tome-action-btn");
+      btn.textContent = `Replace slot ${i + 1}: ${slotDef ? slotDef.name : "empty"}`;
+      btn.addEventListener("click", () => {
+        TomeInventory.replace(i, tomeId);
+        renderTomeSlots();
+        closeTomeModal();
+      });
+      actEl.appendChild(btn);
+    });
+
+    const trashBtn = document.createElement("button");
+    trashBtn.classList.add("tome-action-btn", "trash");
+    trashBtn.textContent = "✕ DISCARD THIS TOME";
+    trashBtn.addEventListener("click", closeTomeModal);
+    actEl.appendChild(trashBtn);
+  }
+
+  function closeTomeModal() {
+    document.getElementById("tome-modal").classList.add("hidden");
+    startAttackTimer(window._onMonsterAttack);
+    if (window._resolveTomeDecision) {
+      const res = window._resolveTomeDecision;
+      window._resolveTomeDecision = null;
+      res();
+    }
+  }
+
+  function showTomeNotification(text) {
+    const el = document.createElement("div");
+    el.classList.add("tome-drop-notif");
+    el.textContent = text;
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }
+
+  function setupTomeSlotClicks() {
+    document.querySelectorAll(".tome-slot").forEach((slot, i) => {
+      slot.addEventListener("click", () => {
+        if (!TomeInventory.slots[i]) return;
+        if (GridState.isLocked) return;
+        const result = TomeInventory.use(i, GridState.grid);
+        if (!result) return;
+        renderTomeSlots();
+        applyTomeEffect(result.changed);
+        const def = TOME_DEFS[result.tomeId];
+        showTomeNotification(`${def.name} USED!`);
+      });
+    });
+  }
+
+  window.UI = {
+    showScreen,
+    updateMonsterHp,
+    updateMageHp,
+    renderMonsterInfo,
+    updateRageIndicator,
+    onMatchResult,
+    onMageDamage,
+    showPhase2UI,
+    hidePhase2UI,
+    updatePhase2UI,
+    renderTomeSlots,
+    showTomeDrop,
+    showTomeNotification,
+    setupTomeSlotClicks,
+  };
+
+  // ============================================================
+  //  main.js
+  // ============================================================
+
+  let isGameOver = false;
+  window.isGameOver = false;
+
+  function onMonsterAttack(result) {
+    if (isGameOver) return;
+    UI.onMageDamage(result);
+    if (result.mageDead) endGame(false);
+  }
+  window._onMonsterAttack = onMonsterAttack;
+
+  let comboResetTimer = null;
+
+  function startGame() {
+    isGameOver = false;
+    window.isGameOver = false;
+
+    CombatState.mageHp = CombatState.mageMaxHp;
+    TomeInventory.slots = [null, null, null, null];
+    UI.renderTomeSlots();
+
+    loadMonster(0);
+    UI.showScreen("screen-game");
+    initGrid(document.getElementById("grid-canvas"));
+    UI.renderMonsterInfo();
+    UI.updateMageHp();
+    UI.updateRageIndicator();
+    UI.hidePhase2UI();
+    startAttackTimer(onMonsterAttack);
+    UI.setupTomeSlotClicks();
+  }
+
+  window.onMonsterDefeated = function(matchResult) {
+    if (isGameOver) return;
+    stopAttackTimer();
+    const tomeDrop = rollTomeDrop("kill");
+
+    setTimeout(async () => {
+      if (isGameOver) return;
+
+      if (tomeDrop) {
+        await new Promise(resolve => {
+          window._resolveTomeDecision = resolve;
+          UI.showTomeDrop(tomeDrop);
+        });
+      }
+
+      if (isGameOver) return;
+
+      if (isLastMonster()) { endGame(true); return; }
+
+      loadMonster(nextMonsterIndex());
+      initGrid(document.getElementById("grid-canvas"));
+      UI.renderMonsterInfo();
+      UI.updateMageHp();
+      UI.updateRageIndicator();
+      UI.hidePhase2UI();
+      startAttackTimer(onMonsterAttack);
+    }, 600);
+  };
+
+  function endGame(victory) {
+    if (isGameOver && !victory) return;
+    isGameOver = true;
+    window.isGameOver = true;
+
+    stopAttackTimer();
+    clearTimeout(comboResetTimer);
+
+    const modal = document.getElementById("tome-modal");
+    modal.classList.add("hidden");
+    if (window._resolveTomeDecision) {
+      const res = window._resolveTomeDecision;
+      window._resolveTomeDecision = null;
+      res();
+    }
+
+    if (victory) UI.showScreen("screen-victory");
+    else         UI.showScreen("screen-gameover");
+  }
+
+  // ---------- Phase 2 UI trigger hook ----------
+  const _origTriggerPhase2 = triggerPhase2;
+  triggerPhase2 = function() {
+    CombatState.isPhase2 = true;
+    Boss.startPhase2();
+    UI.showPhase2UI();
+  };
+
+  // ---------- Button Wiring ----------
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("btn-start").addEventListener("click", startGame);
+    document.getElementById("btn-howto").addEventListener("click", () => UI.showScreen("screen-howto"));
+    document.getElementById("btn-back").addEventListener("click",  () => UI.showScreen("screen-menu"));
+    document.getElementById("btn-retry").addEventListener("click", startGame);
+    document.getElementById("btn-menu").addEventListener("click",  () => UI.showScreen("screen-menu"));
+    document.getElementById("btn-retry-win").addEventListener("click", startGame);
+    document.getElementById("btn-menu-win").addEventListener("click",  () => UI.showScreen("screen-menu"));
+    UI.showScreen("screen-menu");
+  });
+  </script>
+
+</body>
+</html>
