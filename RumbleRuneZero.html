@@ -618,6 +618,8 @@ html, body {
         <li>Monster attacks on a timer — survive and clear the dungeon.</li>
         <li>Comboing the monster triggers <span class="highlight rage">RAGE MODE</span>.</li>
         <li>Tomes are one-use spells. You can hold up to 4.</li>
+        <li><span class="highlight">OVERGROW</span> converts Dark→Grass &amp; heals 1/5 HP.</li>
+        <li><span class="highlight">TIDAL RUIN</span> treats Dark as Water &amp; removes Rage.</li>
         <li><span class="highlight fire">Fire</span> beats Grass &nbsp;|&nbsp;
             <span class="highlight grass">Grass</span> beats Water &nbsp;|&nbsp;
             <span class="highlight water">Water</span> beats Fire</li>
@@ -936,7 +938,7 @@ html, body {
     overgrow: {
       id: "overgrow",
       name: "OVERGROW",
-      desc: "Each Grass rune converts Dark runes in its 3x3 area to Grass.",
+      desc: "Each Grass rune converts Dark runes in its 3x3 area to Grass. Heals 1/5 of max HP.",
       effect(grid) {
         const ROWS = grid.length;
         const COLS = grid[0].length;
@@ -962,14 +964,28 @@ html, body {
             }
           }
         }
+        // Heal 1/5 of max HP, capped at max
+        const healAmount = Math.floor(CombatState.mageMaxHp / 5);
+        CombatState.mageHp = Math.min(CombatState.mageMaxHp, CombatState.mageHp + healAmount);
+        if (window.UI) window.UI.updateMageHp();
         return changed;
       },
     },
     tidal_ruin: {
       id: "tidal_ruin",
       name: "TIDAL RUIN",
-      desc: "Dark runes deal damage as Water this turn.",
-      effect(_grid) { TomeState.tidalRuinActive = true; return []; },
+      desc: "Dark runes deal damage as Water this turn. Removes Rage Mode.",
+      effect(_grid) {
+        TomeState.tidalRuinActive = true;
+        // Remove rage mode and restart attack timer at normal speed
+        if (CombatState.isRageMode) {
+          CombatState.isRageMode = false;
+          CombatState.comboHits = 0;
+          restartAttackTimer(false);
+          if (window.UI) window.UI.updateRageIndicator();
+        }
+        return [];
+      },
     },
     shadow_shock: {
       id: "shadow_shock",
