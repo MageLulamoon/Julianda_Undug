@@ -311,44 +311,63 @@ html, body {
 /* Phase 2 UI */
 #phase2-ui {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(144, 96, 208, 0.12);
+  border: 2px solid var(--col-dark);
+  animation: phase2-pulse 1s ease-in-out infinite;
+  width: 100%;
 }
 #phase2-ui.hidden { display: none; }
 
-.phase2-label {
-  font-size: 6px;
-  color: var(--col-dark);
-  letter-spacing: 1px;
+@keyframes phase2-pulse {
+  0%, 100% { border-color: var(--col-dark); box-shadow: 0 0 8px rgba(144,96,208,0.3); }
+  50%       { border-color: #c090ff;         box-shadow: 0 0 20px rgba(144,96,208,0.7); }
 }
 
-#phase2-sequence { display: flex; gap: 4px; }
+.phase2-label {
+  font-size: 9px;
+  color: #c090ff;
+  letter-spacing: 3px;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(144,96,208,0.8);
+  animation: phase2-pulse 1s ease-in-out infinite;
+}
+
+#phase2-sequence { display: flex; gap: 10px; align-items: center; }
 
 .seq-rune {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--bg-border);
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--bg-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 6px;
+  font-size: 14px;
+  font-family: var(--font-main);
+  font-weight: bold;
+  letter-spacing: 0;
+  transition: opacity 0.2s;
 }
-.seq-rune.fire  { border-color: var(--col-fire);  color: var(--col-fire); }
-.seq-rune.water { border-color: var(--col-water); color: var(--col-water); }
-.seq-rune.grass { border-color: var(--col-grass); color: var(--col-grass); }
-.seq-rune.dark  { border-color: var(--col-dark);  color: var(--col-dark); }
-.seq-rune.matched { opacity: 0.35; }
+.seq-rune.fire  { border-color: var(--col-fire);  color: var(--col-fire);  background: rgba(255,96,48,0.15);  box-shadow: 0 0 8px rgba(255,96,48,0.4); }
+.seq-rune.water { border-color: var(--col-water); color: var(--col-water); background: rgba(48,170,255,0.15); box-shadow: 0 0 8px rgba(48,170,255,0.4); }
+.seq-rune.grass { border-color: var(--col-grass); color: var(--col-grass); background: rgba(64,208,96,0.15);  box-shadow: 0 0 8px rgba(64,208,96,0.4); }
+.seq-rune.matched { opacity: 0.25; box-shadow: none; }
 
-#phase2-progress { display: flex; gap: 3px; align-items: center; }
+#phase2-progress { display: flex; gap: 8px; align-items: center; }
 .progress-dot {
-  width: 6px;
-  height: 6px;
-  border: 1px solid var(--col-dark);
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--col-dark);
   background: transparent;
+  transition: background 0.2s, box-shadow 0.2s;
 }
-.progress-dot.filled { background: var(--col-dark); }
+.progress-dot.filled {
+  background: var(--col-dark);
+  box-shadow: 0 0 8px rgba(144,96,208,0.8);
+}
 
 /* -- Grid -- */
 #grid-wrap {
@@ -1624,6 +1643,16 @@ html, body {
   function showPhase2UI() {
     document.getElementById("phase2-ui").classList.remove("hidden");
     updatePhase2UI();
+    // Flash a big warning so the player knows to look at the sequence
+    const el = document.createElement("div");
+    el.classList.add("tome-drop-notif");
+    el.style.color = "#c090ff";
+    el.style.borderColor = "#c090ff";
+    el.style.fontSize = "10px";
+    el.style.padding = "14px 28px";
+    el.textContent = "⚠ PHASE 2 — MATCH THE SEQUENCE!";
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
   }
 
   function hidePhase2UI() {
@@ -1641,7 +1670,8 @@ html, body {
       const div = document.createElement("div");
       div.classList.add("seq-rune", type);
       if (i < progress) div.classList.add("matched");
-      div.textContent = type[0].toUpperCase();
+      // Show full type name for readability
+      div.textContent = type.toUpperCase();
       seqEl.appendChild(div);
     });
 
