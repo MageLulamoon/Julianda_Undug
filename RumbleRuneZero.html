@@ -1307,6 +1307,51 @@ html, body {
     return normals[Math.floor(Math.random() * normals.length)];
   }
 
+  // Returns a random rune type that won't immediately form a match
+  // at position (r, c) given the current grid state.
+  // It checks the two neighbours to the left and the two above —
+  // if both are the same type, that type is excluded from the pool.
+  // Falls back to fully random if every type is excluded (very rare).
+  function safeRune(grid, r, c) {
+    const ALL_TYPES = ["fire", "water", "grass", "dark"];
+    const DARK_CHANCE = 0.10;
+
+    // Build a set of types that would create an immediate 3-in-a-row
+    const forbidden = new Set();
+
+    // Check horizontal: if the two tiles to the left match each other
+    if (c >= 2) {
+      const l1 = grid[r][c - 1];
+      const l2 = grid[r][c - 2];
+      if (l1 && l2 && l1.type === l2.type) forbidden.add(l1.type);
+    }
+
+    // Check vertical: if the two tiles above match each other
+    if (r >= 2) {
+      const u1 = grid[r - 1][c];
+      const u2 = grid[r - 2][c];
+      if (u1 && u2 && u1.type === u2.type) forbidden.add(u1.type);
+    }
+
+    // Build allowed pool, respecting dark's lower spawn rate
+    let pool = ALL_TYPES.filter(t => !forbidden.has(t));
+
+    // If nothing is forbidden just use normal weighted random
+    if (pool.length === ALL_TYPES.length) return randomRune();
+
+    // If everything is forbidden (shouldn't happen with 4 types) fall back
+    if (pool.length === 0) return randomRune();
+
+    // Weighted pick: dark gets weight 1, others get weight ~3 each
+    // so dark stays roughly 10% even after filtering
+    const weighted = [];
+    for (const t of pool) {
+      if (t === "dark") weighted.push(t);           // weight 1
+      else weighted.push(t, t, t);                   // weight 3
+    }
+    return weighted[Math.floor(Math.random() * weighted.length)];
+  }
+
   function resolveStartingMatches() {
     let found = true;
     while (found) {
@@ -1490,9 +1535,11 @@ html, body {
 
   function refillGrid() {
     const grid = GridState.grid;
+    // Fill top-to-bottom so each new tile can check the ones
+    // already placed above it in the same refill pass
     for (let r = 0; r < GRID_ROWS; r++)
       for (let c = 0; c < GRID_COLS; c++)
-        if (grid[r][c] === null) grid[r][c] = { type: randomRune() };
+        if (grid[r][c] === null) grid[r][c] = { type: safeRune(grid, r, c) };
   }
 
   function applyTomeEffect(changedCells) {
