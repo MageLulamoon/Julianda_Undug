@@ -1723,6 +1723,8 @@ html, body {
   function showPhase2UI() {
     document.getElementById("phase2-ui").classList.remove("hidden");
     updatePhase2UI();
+    // Redraw the boss sprite in its phase 2 form immediately
+    renderMonsterSprite();
     // Flash a big warning so the player knows to look at the sequence
     const el = document.createElement("div");
     el.classList.add("tome-drop-notif");
