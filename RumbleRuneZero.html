@@ -1522,24 +1522,149 @@ html, body {
     }
   }
 
+  // ── Animation helpers ──────────────────────────────────────
+  const ANIM_SWAP_MS   = 120;  // swap slide duration
+  const ANIM_FALL_MS   = 160;  // gravity fall duration
+  const ANIM_FLASH_MS  = 180;  // match flash duration
+
+  // Easing: smooth out
+  function easeOut(t) { return 1 - (1 - t) * (1 - t); }
+
+  // Draw grid with optional per-cell pixel offsets for animation
+  function drawGridAnimated(offsets) {
+    const { ctx, grid, selectedCell } = GridState;
+    if (!ctx) return;
+    ctx.clearRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const bx = c * TILE_SIZE;
+        const by = r * TILE_SIZE;
+        // Background tile always at grid position
+        ctx.fillStyle = "#1a1a28";
+        ctx.fillRect(bx, by, TILE_SIZE, TILE_SIZE);
+        ctx.strokeStyle = "#2a2a3a";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx + 0.5, by + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+      }
+    }
+
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const cell = grid[r][c];
+        if (!cell) continue;
+        const key = r + "," + c;
+        const off = offsets && offsets[key];
+        const x = c * TILE_SIZE + (off ? off.dx : 0);
+        const y = r * TILE_SIZE + (off ? off.dy : 0);
+
+        const RUNE_DRAW_FNS = { fire: draw_rune_fire, water: draw_rune_water, grass: draw_rune_grass, dark: draw_rune_dark };
+        const runeFn = RUNE_DRAW_FNS[cell.type];
+        if (runeFn) {
+          runeFn(ctx, x, y, TILE_SIZE);
+        } else {
+          const pad = 6;
+          ctx.fillStyle = RUNE_COLORS[cell.type] || "#888";
+          ctx.fillRect(x + pad, y + pad, TILE_SIZE - pad * 2, TILE_SIZE - pad * 2);
+        }
+
+        if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
+          ctx.strokeStyle = "#ffd040";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        }
+      }
+    }
+  }
+
+  // Animate a swap between two cells, then call onDone
+  function animateSwap(r1, c1, r2, c2, onDone) {
+    const grid = GridState.grid;
+    const dx = (c2 - c1) * TILE_SIZE;
+    const dy = (r2 - r1) * TILE_SIZE;
+    const start = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - start) / ANIM_SWAP_MS);
+      const e = easeOut(t);
+      const offsets = {};
+      offsets[r1 + "," + c1] = { dx:  dx * e, dy:  dy * e };
+      offsets[r2 + "," + c2] = { dx: -dx * e, dy: -dy * e };
+      drawGridAnimated(offsets);
+      if (t < 1) requestAnimationFrame(frame);
+      else onDone();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Animate tiles falling down after gravity, then call onDone
+  function animateFall(fallMap, onDone) {
+    // fallMap: { "r,c": dropRows } — how many rows each tile fell
+    const start = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - start) / ANIM_FALL_MS);
+      const e = easeOut(t);
+      const offsets = {};
+      for (const [key, rows] of Object.entries(fallMap)) {
+        // tile is now at final position; animate from above
+        offsets[key] = { dx: 0, dy: -rows * TILE_SIZE * (1 - e) };
+      }
+      drawGridAnimated(offsets);
+      if (t < 1) requestAnimationFrame(frame);
+      else onDone();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Flash matched tiles white then fade, then call onDone
+  function animateFlash(positions, onDone) {
+    const start = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - start) / ANIM_FLASH_MS);
+      drawGrid();
+      const ctx = GridState.ctx;
+      // Fade from opaque to transparent
+      const alpha = 0.55 * (1 - t);
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      for (const { r, c } of positions) {
+        ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      }
+      if (t < 1) requestAnimationFrame(frame);
+      else onDone();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ── Swap with slide animation ───────────────────────────────
   function attemptSwap(r1, c1, r2, c2) {
     const grid = GridState.grid;
+    // Tentative swap
     const tmp = grid[r1][c1];
     grid[r1][c1] = grid[r2][c2];
     grid[r2][c2] = tmp;
 
     const matches = findAllMatches(grid);
     if (matches.size === 0) {
-      const tmp2 = grid[r1][c1];
-      grid[r1][c1] = grid[r2][c2];
-      grid[r2][c2] = tmp2;
-      drawGrid();
+      // Swap back — animate the bounce-back
+      GridState.isLocked = true;
+      animateSwap(r1, c1, r2, c2, () => {
+        const tmp2 = grid[r1][c1];
+        grid[r1][c1] = grid[r2][c2];
+        grid[r2][c2] = tmp2;
+        animateSwap(r2, c2, r1, c1, () => {
+          drawGrid();
+          GridState.isLocked = false;
+        });
+      });
       return;
     }
 
     GridState.isLocked = true;
-    drawGrid();
-    runCascadeLoop(0);
+    animateSwap(r1, c1, r2, c2, () => {
+      runCascadeLoop(0);
+    });
   }
 
   async function runCascadeLoop(chainLevel) {
@@ -1552,18 +1677,44 @@ html, body {
       return;
     }
 
-    drawGridWithHighlights(result.matchedPositions);
-    await sleep(250);
+    // Flash matched tiles
+    await new Promise(res => animateFlash(result.matchedPositions, res));
 
     if (window.isGameOver) { GridState.isLocked = false; return; }
+
+    // Compute fall distances before gravity
+    const preFall = {};
+    const grid = GridState.grid;
+    for (let c = 0; c < GRID_COLS; c++) {
+      for (let r = 0; r < GRID_ROWS; r++) {
+        if (grid[r][c] !== null) preFall[r + "," + c] = r;
+      }
+    }
 
     applyGravity();
     refillGrid();
-    drawGrid();
-    await sleep(150);
+
+    // Build fall map: where did each surviving tile land?
+    const fallMap = {};
+    for (let c = 0; c < GRID_COLS; c++) {
+      for (let r = 0; r < GRID_ROWS; r++) {
+        if (grid[r][c] !== null) {
+          const key = r + "," + c;
+          // Find original row of this tile (match by identity)
+          const prevRow = preFall[key];
+          // If tile is lower than it was, or is new (refill), animate from above
+          if (prevRow === undefined || r > prevRow) {
+            fallMap[key] = (prevRow === undefined) ? (r + 1) : (r - prevRow);
+          }
+        }
+      }
+    }
+
+    await new Promise(res => animateFall(fallMap, res));
 
     if (window.isGameOver) { GridState.isLocked = false; return; }
 
+    drawGrid();
     UI.onMatchResult(result);
 
     if (CombatState.monster && CombatState.monster.currentHp <= 0) {
@@ -10145,39 +10296,61 @@ function draw_void_phase2(ctx, x, y, size) {
   }
 
 
-  // ── Background music ──
+  // ── Background music (Web Audio API for gapless loop) ──
   (function() {
-    const music = document.getElementById("bg-music");
     const muteBtn = document.getElementById("mute-btn");
     let muted = false;
-    let started = false;
-    music.volume = 0.5;
+    let audioCtx = null;
+    let audioBuffer = null;
+    let sourceNode = null;
+    let gainNode = null;
+    let playing = false;
 
-    window.musicPlay = function() {
-      if (muted) return;
-      if (!started) {
-        music.play().catch(() => {});
-        started = true;
-      } else {
-        music.play().catch(() => {});
-      }
+    // Fetch the base64 audio from the <audio> tag src
+    async function initAudio() {
+      if (audioCtx) return; // already initialised
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      gainNode = audioCtx.createGain();
+      gainNode.gain.value = muted ? 0 : 0.5;
+      gainNode.connect(audioCtx.destination);
+
+      // Grab base64 from the hidden <audio> element source
+      const src = document.querySelector("#bg-music source").src;
+      const res = await fetch(src);
+      const arrayBuf = await res.arrayBuffer();
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+    }
+
+    function startSource() {
+      if (!audioCtx || !audioBuffer) return;
+      if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+      sourceNode = audioCtx.createBufferSource();
+      sourceNode.buffer = audioBuffer;
+      sourceNode.loop = true;        // gapless — Web Audio handles this perfectly
+      sourceNode.connect(gainNode);
+      sourceNode.start(0);
+      playing = true;
+    }
+
+    window.musicPlay = async function() {
+      await initAudio();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      if (!playing) startSource();
     };
 
     window.musicStop = function() {
-      music.pause();
+      if (!playing) return;
+      if (sourceNode) { try { sourceNode.stop(); } catch(e){} sourceNode = null; }
+      playing = false;
     };
 
-    // Start on first interaction (autoplay policy)
-    function tryStart() {
-      if (!started && !muted) {
-        // Only auto-start if we're on the game screen, not menu
-        if (document.getElementById("screen-game").classList.contains("active")) {
-          music.play().catch(() => {});
-          started = true;
-        }
-      }
+    // Start on first user interaction
+    async function tryStart() {
       document.removeEventListener("click", tryStart);
       document.removeEventListener("keydown", tryStart);
+      if (document.getElementById("screen-game").classList.contains("active")) {
+        await window.musicPlay();
+      }
     }
     document.addEventListener("click", tryStart);
     document.addEventListener("keydown", tryStart);
@@ -10185,7 +10358,7 @@ function draw_void_phase2(ctx, x, y, size) {
     muteBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       muted = !muted;
-      music.muted = muted;
+      if (gainNode) gainNode.gain.value = muted ? 0 : 0.5;
       muteBtn.textContent = muted ? "🔇 MUSIC" : "🔊 MUSIC";
     });
   })();
