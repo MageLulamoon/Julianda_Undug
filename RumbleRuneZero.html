@@ -634,6 +634,41 @@ html, body {
   100% { opacity: 0; transform: translate(-50%, -40%); }
 }
 
+
+/* ---------- PAUSE BUTTON ---------- */
+#pause-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 50;
+  font-family: var(--font-main);
+  font-size: 7px;
+  color: var(--col-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-border);
+  padding: 6px 10px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  display: none;
+}
+#pause-btn:hover { color: var(--col-white); border-color: var(--col-white); }
+#pause-btn.visible { display: block; }
+
+/* ---------- PAUSE OVERLAY ---------- */
+#pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.80);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 200;
+}
+#pause-overlay.hidden { display: none; }
+.pause-title { font-size: 18px; color: var(--col-white); letter-spacing: 4px; }
+
 /* ---------- Utility ---------- */
 .hidden { display: none !important; }
 ::-webkit-scrollbar { width: 4px; }
@@ -676,6 +711,16 @@ html, body {
     </div>
   </div>
 
+  <!-- PAUSE BUTTON -->
+  <button id="pause-btn">⏸ PAUSE</button>
+
+  <!-- PAUSE OVERLAY -->
+  <div id="pause-overlay" class="hidden">
+    <h2 class="pause-title">PAUSED</h2>
+    <button class="btn-pixel" id="btn-resume">RESUME</button>
+    <button class="btn-pixel secondary" id="btn-pause-menu">MAIN MENU</button>
+  </div>
+
   <!-- ===================== GAMEPLAY SCREEN ===================== -->
   <div id="screen-game" class="screen">
 
@@ -696,7 +741,7 @@ html, body {
       </div>
 
       <div id="monster-sprite-wrap">
-        <canvas id="monster-canvas" width="80" height="80"></canvas>
+        <canvas id="monster-canvas" width="32" height="32"></canvas>
       </div>
 
       <!-- Mage HP now lives here so it's always visible -->
@@ -1472,7 +1517,7 @@ html, body {
   }
 
   async function runCascadeLoop(chainLevel) {
-    if (window.isGameOver) { GridState.isLocked = false; return; }
+    if (window.isGameOver || window.isPaused) { GridState.isLocked = false; return; }
 
     const result = resolveMatches(GridState.grid, chainLevel);
     if (!result) {
@@ -1632,7 +1677,7 @@ html, body {
 
     const fn = drawFns[monster.id];
     if (fn) {
-      fn(ctx, 0, 0, 80);
+      fn(ctx, 0, 0, 32);
     } else {
       // Placeholder for ember_sprite (no sprite yet)
       const color = monster.spriteColor || "#888";
@@ -1651,7 +1696,7 @@ html, body {
     if (CombatState.isRageMode) {
       ctx.strokeStyle = "#ff2020";
       ctx.lineWidth = 3;
-      ctx.strokeRect(2, 2, 76, 76);
+      ctx.strokeRect(1, 1, 30, 30);
     }
   }
 
@@ -9977,6 +10022,10 @@ function draw_void_phase2(ctx, x, y, size) {
     UI.hidePhase2UI();
     startAttackTimer(onMonsterAttack);
     UI.setupTomeSlotClicks();
+    isPaused = false;
+    window.isPaused = false;
+    document.getElementById("pause-btn").classList.add("visible");
+    document.getElementById("pause-overlay").classList.add("hidden");
   }
 
   window.onMonsterDefeated = function(matchResult) {
@@ -10024,6 +10073,10 @@ function draw_void_phase2(ctx, x, y, size) {
       res();
     }
 
+    isPaused = false;
+    window.isPaused = false;
+    document.getElementById("pause-btn").classList.remove("visible");
+    document.getElementById("pause-overlay").classList.add("hidden");
     if (victory) UI.showScreen("screen-victory");
     else         UI.showScreen("screen-gameover");
   }
@@ -10036,6 +10089,31 @@ function draw_void_phase2(ctx, x, y, size) {
     UI.showPhase2UI();
   };
 
+
+  // ── Pause logic ──
+  let isPaused = false;
+  window.isPaused = false;
+
+  function pauseGame() {
+    if (isGameOver || isPaused) return;
+    isPaused = true;
+    window.isPaused = true;
+    stopAttackTimer();
+    GridState.isLocked = true;
+    document.getElementById("pause-overlay").classList.remove("hidden");
+    document.getElementById("pause-btn").textContent = "▶ RESUME";
+  }
+
+  function resumeGame() {
+    if (!isPaused) return;
+    isPaused = false;
+    window.isPaused = false;
+    document.getElementById("pause-overlay").classList.add("hidden");
+    document.getElementById("pause-btn").textContent = "⏸ PAUSE";
+    GridState.isLocked = false;
+    startAttackTimer(onMonsterAttack);
+  }
+
   // ---------- Button Wiring ----------
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btn-start").addEventListener("click", startGame);
@@ -10045,6 +10123,9 @@ function draw_void_phase2(ctx, x, y, size) {
     document.getElementById("btn-menu").addEventListener("click",  () => UI.showScreen("screen-menu"));
     document.getElementById("btn-retry-win").addEventListener("click", startGame);
     document.getElementById("btn-menu-win").addEventListener("click",  () => UI.showScreen("screen-menu"));
+    document.getElementById("pause-btn").addEventListener("click", () => { if (isPaused) resumeGame(); else pauseGame(); });
+    document.getElementById("btn-resume").addEventListener("click", resumeGame);
+    document.getElementById("btn-pause-menu").addEventListener("click", () => { isPaused = false; window.isPaused = false; endGame(false); UI.showScreen("screen-menu"); });
     UI.showScreen("screen-menu");
   });
   </script>
