@@ -405,6 +405,10 @@ html, body {
   cursor: pointer;
   width: 100%;
   height: 100%;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .label {
@@ -1682,33 +1686,36 @@ html, body {
 
     if (window.isGameOver) { GridState.isLocked = false; return; }
 
-    // Compute fall distances before gravity
-    const preFall = {};
+    // Compute fall distances per column before gravity
+    // For each column, count how many nulls are below each tile —
+    // that's exactly how far it will fall.
     const grid = GridState.grid;
+    const fallMap = {};
+
     for (let c = 0; c < GRID_COLS; c++) {
-      for (let r = 0; r < GRID_ROWS; r++) {
-        if (grid[r][c] !== null) preFall[r + "," + c] = r;
+      // Count nulls below each row (these are the cleared tiles)
+      let nullsBelow = 0;
+      for (let r = GRID_ROWS - 1; r >= 0; r--) {
+        if (grid[r][c] === null) {
+          nullsBelow++;
+        } else if (nullsBelow > 0) {
+          // This tile will fall nullsBelow rows — compute its landing row
+          const landRow = r + nullsBelow;
+          fallMap[landRow + "," + c] = nullsBelow;
+        }
+      }
+      // New tiles refilled from top: they fall from row -(nullsBelow-i) to row i
+      // After gravity+refill, top `nullsBelow` rows will be new tiles
+      for (let i = 0; i < nullsBelow; i++) {
+        // tile at row i after refill fell from off-screen above
+        fallMap[i + "," + c] = nullsBelow - i + (GRID_ROWS - 1 - (nullsBelow - 1));
+        // simpler: just fall from top of screen — distance = final row + nullsBelow
+        fallMap[i + "," + c] = i + nullsBelow;
       }
     }
 
     applyGravity();
     refillGrid();
-
-    // Build fall map: where did each surviving tile land?
-    const fallMap = {};
-    for (let c = 0; c < GRID_COLS; c++) {
-      for (let r = 0; r < GRID_ROWS; r++) {
-        if (grid[r][c] !== null) {
-          const key = r + "," + c;
-          // Find original row of this tile (match by identity)
-          const prevRow = preFall[key];
-          // If tile is lower than it was, or is new (refill), animate from above
-          if (prevRow === undefined || r > prevRow) {
-            fallMap[key] = (prevRow === undefined) ? (r + 1) : (r - prevRow);
-          }
-        }
-      }
-    }
 
     await new Promise(res => animateFall(fallMap, res));
 
